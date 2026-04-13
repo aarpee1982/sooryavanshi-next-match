@@ -2,10 +2,8 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
-import json
 import time
 
-# ─── PAGE CONFIG ─────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Sooryavanshi's Next Match",
     page_icon="🏏",
@@ -13,27 +11,24 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ─── IST TIMEZONE ─────────────────────────────────────────────────────────────
 IST = timezone(timedelta(hours=5, minutes=30))
 
-# ─── RR SCHEDULE 2026 (hardcoded, all times in IST) ──────────────────────────
 RR_SCHEDULE = [
-    {"date": "2026-03-30", "time": "19:30", "opponent": "Chennai Super Kings",    "venue": "ACA Stadium, Guwahati",              "short": "CSK", "result": "RR won"},
-    {"date": "2026-04-04", "time": "19:30", "opponent": "Gujarat Titans",         "venue": "Narendra Modi Stadium, Ahmedabad",   "short": "GT",  "result": "RR won"},
-    {"date": "2026-04-07", "time": "19:30", "opponent": "Mumbai Indians",         "venue": "ACA Stadium, Guwahati",              "short": "MI",  "result": "RR won"},
-    {"date": "2026-04-10", "time": "19:30", "opponent": "Royal Challengers Bengaluru", "venue": "ACA Stadium, Guwahati",         "short": "RCB", "result": "RR won"},
-    {"date": "2026-04-13", "time": "19:30", "opponent": "Sunrisers Hyderabad",    "venue": "Rajiv Gandhi Intl. Stadium, Hyderabad", "short": "SRH", "result": None},
-    {"date": "2026-04-19", "time": "15:30", "opponent": "Kolkata Knight Riders",  "venue": "Eden Gardens, Kolkata",              "short": "KKR", "result": None},
-    {"date": "2026-04-22", "time": "19:30", "opponent": "Lucknow Super Giants",   "venue": "Ekana Cricket Stadium, Lucknow",     "short": "LSG", "result": None},
-    {"date": "2026-04-25", "time": "19:30", "opponent": "Sunrisers Hyderabad",    "venue": "Sawai Mansingh Stadium, Jaipur",     "short": "SRH", "result": None},
-    {"date": "2026-04-28", "time": "19:30", "opponent": "Punjab Kings",           "venue": "New Intl. Cricket Stadium, New Chandigarh", "short": "PBKS", "result": None},
-    {"date": "2026-05-01", "time": "19:30", "opponent": "Delhi Capitals",         "venue": "Sawai Mansingh Stadium, Jaipur",     "short": "DC",  "result": None},
-    {"date": "2026-05-09", "time": "19:30", "opponent": "Gujarat Titans",         "venue": "Sawai Mansingh Stadium, Jaipur",     "short": "GT",  "result": None},
-    {"date": "2026-05-17", "time": "19:30", "opponent": "Delhi Capitals",         "venue": "Arun Jaitley Stadium, Delhi",        "short": "DC",  "result": None},
-    {"date": "2026-05-19", "time": "19:30", "opponent": "Lucknow Super Giants",   "venue": "Sawai Mansingh Stadium, Jaipur",     "short": "LSG", "result": None},
+    {"date": "2026-03-30", "time": "19:30", "opponent": "Chennai Super Kings",         "venue": "ACA Stadium, Guwahati",                    "short": "CSK",  "result": "RR won"},
+    {"date": "2026-04-04", "time": "19:30", "opponent": "Gujarat Titans",              "venue": "Narendra Modi Stadium, Ahmedabad",          "short": "GT",   "result": "RR won"},
+    {"date": "2026-04-07", "time": "19:30", "opponent": "Mumbai Indians",              "venue": "ACA Stadium, Guwahati",                    "short": "MI",   "result": "RR won"},
+    {"date": "2026-04-10", "time": "19:30", "opponent": "Royal Challengers Bengaluru", "venue": "ACA Stadium, Guwahati",                    "short": "RCB",  "result": "RR won"},
+    {"date": "2026-04-13", "time": "19:30", "opponent": "Sunrisers Hyderabad",         "venue": "Rajiv Gandhi Intl. Stadium, Hyderabad",    "short": "SRH",  "result": None},
+    {"date": "2026-04-19", "time": "15:30", "opponent": "Kolkata Knight Riders",       "venue": "Eden Gardens, Kolkata",                    "short": "KKR",  "result": None},
+    {"date": "2026-04-22", "time": "19:30", "opponent": "Lucknow Super Giants",        "venue": "Ekana Cricket Stadium, Lucknow",           "short": "LSG",  "result": None},
+    {"date": "2026-04-25", "time": "19:30", "opponent": "Sunrisers Hyderabad",         "venue": "Sawai Mansingh Stadium, Jaipur",           "short": "SRH",  "result": None},
+    {"date": "2026-04-28", "time": "19:30", "opponent": "Punjab Kings",                "venue": "New Intl. Cricket Stadium, New Chandigarh","short": "PBKS", "result": None},
+    {"date": "2026-05-01", "time": "19:30", "opponent": "Delhi Capitals",              "venue": "Sawai Mansingh Stadium, Jaipur",           "short": "DC",   "result": None},
+    {"date": "2026-05-09", "time": "19:30", "opponent": "Gujarat Titans",              "venue": "Sawai Mansingh Stadium, Jaipur",           "short": "GT",   "result": None},
+    {"date": "2026-05-17", "time": "19:30", "opponent": "Delhi Capitals",              "venue": "Arun Jaitley Stadium, Delhi",              "short": "DC",   "result": None},
+    {"date": "2026-05-19", "time": "19:30", "opponent": "Lucknow Super Giants",        "venue": "Sawai Mansingh Stadium, Jaipur",           "short": "LSG",  "result": None},
 ]
 
-# ─── FALLBACK STATS (as of April 13, 2026) ────────────────────────────────────
 FALLBACK_STATS = {
     "matches": 5,
     "runs": 239,
@@ -49,569 +44,288 @@ FALLBACK_STATS = {
         {"match": "vs GT",  "runs": 31, "balls": 18, "fours": 5, "sixes": 1},
         {"match": "vs MI",  "runs": 39, "balls": 14, "fours": 2, "sixes": 5},
         {"match": "vs RCB", "runs": 78, "balls": 26, "fours": 5, "sixes": 8},
-        {"match": "vs SRH", "runs": 0,  "balls": 0,  "fours": 0, "sixes": 0},  # today's match placeholder
     ],
-    "last_updated": "Apr 13, 2026 — Live match day"
+    "last_updated": "Apr 13, 2026"
 }
 
-# ─── SCRAPE STATS FROM CRICBUZZ ───────────────────────────────────────────────
-@st.cache_data(ttl=300)  # cache 5 min
+@st.cache_data(ttl=300)
 def fetch_live_stats():
-    """Try to scrape Vaibhav's IPL 2026 stats. Falls back to hardcoded data."""
     try:
         url = "https://www.iplt20.com/players/vaibhav-sooryavanshi/22203"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         r = requests.get(url, headers=headers, timeout=8)
         if r.status_code == 200:
-            soup = BeautifulSoup(r.text, "html.parser")
-            # Try to find stats tables
-            stats = {}
-            tables = soup.find_all("table")
-            for table in tables:
-                rows = table.find_all("tr")
-                for row in rows:
-                    cells = row.find_all(["td", "th"])
-                    if len(cells) >= 2:
-                        pass  # Parse as needed
-            # If we can't reliably parse, fall back
             return None
     except Exception:
         return None
     return None
 
-# ─── FIND NEXT MATCH ──────────────────────────────────────────────────────────
 def get_next_match():
     now_ist = datetime.now(IST)
     for match in RR_SCHEDULE:
-        match_dt_str = f"{match['date']} {match['time']}"
-        match_dt = datetime.strptime(match_dt_str, "%Y-%m-%d %H:%M").replace(tzinfo=IST)
-        # Show current match if within 4 hours of start (likely live or upcoming today)
-        if match_dt >= now_ist - timedelta(hours=4):
-            return match, match_dt
+        mdt = datetime.strptime(f"{match['date']} {match['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=IST)
+        if mdt >= now_ist - timedelta(hours=4):
+            return match, mdt
     return None, None
 
 def get_countdown(match_dt):
     now_ist = datetime.now(IST)
     delta = match_dt - now_ist
-    if delta.total_seconds() < 0:
-        return None, "Live / In Progress"
+    if delta.total_seconds() <= 0:
+        return None, "LIVE"
     days = delta.days
     hours, rem = divmod(delta.seconds, 3600)
-    minutes, seconds = divmod(rem, 60)
-    label = ""
+    minutes, _ = divmod(rem, 60)
     if days > 0:
-        label += f"{days}d "
-    label += f"{hours:02d}h {minutes:02d}m {seconds:02d}s"
-    return delta.total_seconds(), label
+        return delta.total_seconds(), str(days) + "D " + str(hours).zfill(2) + "H " + str(minutes).zfill(2) + "M"
+    return delta.total_seconds(), str(hours).zfill(2) + "H " + str(minutes).zfill(2) + "M"
 
-# ─── CSS ──────────────────────────────────────────────────────────────────────
+stats = fetch_live_stats() or FALLBACK_STATS
+next_match, match_dt = get_next_match()
+now_ist = datetime.now(IST)
+innings_by_match = {i['match'].replace('vs ', ''): i for i in stats['innings'] if i['balls'] > 0}
+
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Oswald:wght@300;400;500;600;700&display=swap');
 
-/* Reset & base */
-[data-testid="stAppViewContainer"] {
-    background: #f0f7ff;
-}
-[data-testid="stHeader"] { background: transparent; }
-[data-testid="stToolbar"] { display: none; }
+* { box-sizing: border-box; }
 
-/* Main container */
-.main-wrapper {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 0 0 60px 0;
-    font-family: 'DM Sans', sans-serif;
-}
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+footer, #MainMenu { display: none !important; }
 
-/* HERO */
-.hero {
-    background: linear-gradient(135deg, #0a1628 0%, #0d2247 50%, #091d3e 100%);
-    border-radius: 24px;
-    padding: 48px 40px 40px;
-    margin-bottom: 20px;
-    position: relative;
-    overflow: hidden;
-}
-.hero::before {
-    content: '';
-    position: absolute;
-    top: -40px; right: -40px;
-    width: 200px; height: 200px;
-    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
-    border-radius: 50%;
-}
-.hero::after {
-    content: '🏏';
-    position: absolute;
-    bottom: 20px; right: 32px;
-    font-size: 80px;
-    opacity: 0.12;
-}
-.hero-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: #60a5fa;
-    margin-bottom: 12px;
-}
-.hero-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 64px;
-    line-height: 1;
-    color: #ffffff;
-    letter-spacing: 2px;
-    margin-bottom: 4px;
-}
-.hero-sub {
-    font-size: 14px;
-    color: #94a3b8;
-    font-weight: 400;
-}
-.hero-age-badge {
-    display: inline-block;
-    margin-top: 16px;
-    background: rgba(59,130,246,0.2);
-    border: 1px solid rgba(59,130,246,0.4);
-    border-radius: 100px;
-    padding: 4px 14px;
-    font-size: 12px;
-    color: #93c5fd;
-    font-family: 'DM Mono', monospace;
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+section.main { background: #080808 !important; }
+
+.block-container {
+    padding: 0 !important;
+    max-width: 720px !important;
+    margin: 0 auto !important;
 }
 
-/* NEXT MATCH CARD */
-.next-match-card {
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 32px;
-    margin-bottom: 16px;
-    border: 1.5px solid #e0eeff;
-    box-shadow: 0 4px 24px rgba(14,50,120,0.07);
-}
-.section-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    color: #94a3b8;
-    margin-bottom: 16px;
-}
-.vs-block {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 20px;
-}
-.team-pill {
-    background: #eff6ff;
-    border-radius: 10px;
-    padding: 10px 18px;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px;
-    letter-spacing: 1px;
-    color: #1e3a5f;
-}
-.vs-text {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    color: #94a3b8;
-}
-.match-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 24px;
-}
-.meta-item {
-    background: #f8faff;
-    border-radius: 12px;
-    padding: 12px 16px;
-}
-.meta-label {
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #94a3b8;
-    margin-bottom: 4px;
-    font-family: 'DM Mono', monospace;
-}
-.meta-value {
-    font-size: 15px;
-    font-weight: 600;
-    color: #0d2247;
-}
+.sv { padding: 0 28px 80px; font-family: 'Inter', sans-serif; color: #fff; background: #080808; }
 
-/* COUNTDOWN */
-.countdown-block {
-    background: linear-gradient(135deg, #1d4ed8, #2563eb);
-    border-radius: 14px;
-    padding: 18px 24px;
-    text-align: center;
-}
-.countdown-label {
-    font-size: 10px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
-    font-family: 'DM Mono', monospace;
-    margin-bottom: 6px;
-}
-.countdown-value {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 40px;
-    color: #ffffff;
-    letter-spacing: 3px;
-    line-height: 1;
-}
-.live-badge {
-    display: inline-block;
-    background: #ef4444;
-    border-radius: 100px;
-    padding: 6px 20px;
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    color: white;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    animation: pulse 1.5s infinite;
-}
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
+.sv-hero { padding: 72px 0 56px; border-bottom: 1px solid #161616; }
+.sv-tag { font-size: 10px; font-weight: 500; letter-spacing: 4px; text-transform: uppercase; color: #3a3a3a; margin-bottom: 20px; }
+.sv-name { font-family: 'Oswald', sans-serif; font-size: clamp(58px, 13vw, 92px); font-weight: 700; line-height: 0.9; color: #fff; letter-spacing: -1px; margin-bottom: 22px; }
+.sv-name span { color: #222; }
+.sv-meta { font-size: 12px; color: #333; letter-spacing: 1px; display: flex; gap: 20px; flex-wrap: wrap; }
+.sv-meta b { color: #666; font-weight: 500; }
 
-/* STATS GRID */
-.stats-card {
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 32px;
-    margin-bottom: 16px;
-    border: 1.5px solid #e0eeff;
-    box-shadow: 0 4px 24px rgba(14,50,120,0.07);
-}
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 16px;
-}
-.stat-box {
-    background: #f0f7ff;
-    border-radius: 14px;
-    padding: 18px 14px;
-    text-align: center;
-}
-.stat-box.highlight {
-    background: linear-gradient(135deg, #0d2247, #1d4ed8);
-}
-.stat-number {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 36px;
-    color: #0d2247;
-    line-height: 1;
-    margin-bottom: 4px;
-}
-.stat-box.highlight .stat-number {
-    color: #ffffff;
-}
-.stat-name {
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #64748b;
-    font-family: 'DM Mono', monospace;
-}
-.stat-box.highlight .stat-name {
-    color: rgba(255,255,255,0.7);
-}
+.sv-sec { padding: 48px 0; border-bottom: 1px solid #111; }
+.sv-sec-label { font-size: 10px; font-weight: 500; letter-spacing: 4px; text-transform: uppercase; color: #333; margin-bottom: 28px; }
 
-/* MATCH LOG */
-.log-card {
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 32px;
-    margin-bottom: 16px;
-    border: 1.5px solid #e0eeff;
-    box-shadow: 0 4px 24px rgba(14,50,120,0.07);
-}
-.log-row {
-    display: grid;
-    grid-template-columns: 60px 1fr auto auto auto;
-    gap: 8px;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 14px;
-}
-.log-row:last-child { border-bottom: none; }
-.log-match { color: #94a3b8; font-family: 'DM Mono', monospace; font-size: 11px; }
-.log-runs { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: #0d2247; line-height: 1; }
-.log-balls { color: #94a3b8; font-size: 12px; font-family: 'DM Mono', monospace; }
-.log-tag { background: #eff6ff; border-radius: 6px; padding: 2px 8px; font-size: 11px; color: #3b82f6; font-family: 'DM Mono', monospace; }
-.log-tag.six { background: #fff7ed; color: #ea580c; }
+.sv-vs { font-family: 'Oswald', sans-serif; font-size: clamp(28px, 7vw, 48px); font-weight: 600; color: #fff; line-height: 1; margin-bottom: 12px; letter-spacing: -0.5px; }
+.sv-detail { font-size: 13px; color: #444; letter-spacing: 0.5px; margin-bottom: 4px; }
+.sv-detail b { color: #777; font-weight: 400; }
 
-/* RECORDS */
-.records-card {
-    background: linear-gradient(135deg, #0a1628 0%, #0d2247 100%);
-    border-radius: 20px;
-    padding: 32px;
-    margin-bottom: 16px;
-}
-.record-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-}
-.record-item:last-child { border-bottom: none; }
-.record-dot {
-    width: 6px; height: 6px;
-    background: #3b82f6;
-    border-radius: 50%;
-    margin-top: 7px;
-    flex-shrink: 0;
-}
-.record-text {
-    font-size: 14px;
-    color: #cbd5e1;
-    line-height: 1.5;
-}
-.record-text strong {
-    color: #ffffff;
-    font-weight: 600;
-}
+.sv-cd { margin-top: 32px; }
+.sv-cd-val { font-family: 'Oswald', sans-serif; font-size: clamp(38px, 9vw, 60px); font-weight: 300; color: #fff; letter-spacing: 4px; line-height: 1; margin-bottom: 8px; }
+.sv-cd-lbl { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #333; }
+.sv-live { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #ef4444; font-weight: 500; margin-top: 32px; }
+.sv-live::before { content: ''; width: 7px; height: 7px; background: #ef4444; border-radius: 50%; animation: blink 1.2s ease-in-out infinite; display: inline-block; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
 
-/* FOOTER */
-.footer {
-    text-align: center;
-    padding: 20px;
-    color: #94a3b8;
-    font-size: 12px;
-    font-family: 'DM Mono', monospace;
-}
+.sv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #161616; border: 1px solid #161616; }
+.sv-cell { background: #080808; padding: 30px 22px; }
+.sv-cell.hi { background: #0c0c0c; }
+.sv-num { font-family: 'Oswald', sans-serif; font-size: 42px; font-weight: 400; color: #fff; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; }
+.sv-lbl { font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: #2a2a2a; font-weight: 500; }
 
-/* Streamlit component overrides */
-div[data-testid="stVerticalBlock"] > div { padding: 0; }
-.block-container { padding: 2rem 1rem 0; }
+.sv-irow { display: grid; grid-template-columns: 52px 1fr 90px 56px 56px; align-items: center; padding: 18px 0; border-bottom: 1px solid #0f0f0f; gap: 8px; }
+.sv-irow:last-child { border-bottom: none; }
+.sv-im { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #2a2a2a; font-weight: 500; }
+.sv-ir { font-family: 'Oswald', sans-serif; font-size: 34px; font-weight: 400; color: #fff; line-height: 1; }
+.sv-ib { font-size: 12px; color: #2a2a2a; line-height: 1.6; }
+.sv-it { font-size: 11px; color: #333; letter-spacing: 1px; text-align: right; }
+
+.sv-rec { display: grid; grid-template-columns: 20px 1fr; gap: 16px; padding: 22px 0; border-bottom: 1px solid #0f0f0f; align-items: start; }
+.sv-rec:last-child { border-bottom: none; }
+.sv-rn { font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 300; color: #222; padding-top: 3px; letter-spacing: 1px; }
+.sv-rt { font-size: 14px; color: #444; line-height: 1.6; font-weight: 300; }
+.sv-rt strong { color: #bbb; font-weight: 500; display: block; margin-bottom: 3px; font-size: 15px; }
+
+.sv-pill { display: inline-block; margin-top: 14px; padding: 4px 14px; border-radius: 2px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; }
+.sv-pill.won { background: #0a1a0a; color: #4ade80; border: 1px solid #152815; }
+.sv-pill.live { background: #1a0a0a; color: #ef4444; border: 1px solid #2a1010; }
+.sv-pill.up { background: #111; color: #444; border: 1px solid #1c1c1c; }
+
+.sv-sgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: #161616; border: 1px solid #161616; margin-top: 22px; }
+.sv-sc { background: #0c0c0c; padding: 18px 10px; text-align: center; }
+.sv-sn { font-family: 'Oswald', sans-serif; font-size: 26px; font-weight: 400; color: #fff; line-height: 1; margin-bottom: 6px; }
+.sv-sl { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #252525; font-weight: 500; }
+.sv-nodata { margin-top: 22px; padding: 18px 0; font-size: 11px; color: #222; letter-spacing: 2px; text-transform: uppercase; }
+
+.sv-footer { padding: 40px 0 20px; font-size: 10px; color: #1c1c1c; letter-spacing: 2px; text-transform: uppercase; border-top: 1px solid #0f0f0f; margin-top: 0; text-align: center; }
+
+div[data-testid="stSlider"] { padding: 8px 0 4px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── FETCH DATA ───────────────────────────────────────────────────────────────
-live = fetch_live_stats()
-stats = live if live else FALLBACK_STATS
-
-next_match, match_dt = get_next_match()
-
-# ─── RENDER ───────────────────────────────────────────────────────────────────
-st.markdown('<div class="main-wrapper">', unsafe_allow_html=True)
+st.markdown('<div class="sv">', unsafe_allow_html=True)
 
 # HERO
-st.markdown("""
-<div class="hero">
-    <div class="hero-eyebrow">Rajasthan Royals · IPL 2026</div>
-    <div class="hero-name">Vaibhav<br>Sooryavanshi</div>
-    <div class="hero-sub">Opener · Left-hand bat · Bihar</div>
-    <div class="hero-age-badge">15 years old · Born Mar 27, 2011</div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    '<div class="sv-hero">'
+    '<div class="sv-tag">Rajasthan Royals &nbsp;&middot;&nbsp; IPL 2026</div>'
+    '<div class="sv-name">VAIBHAV<br><span>SOORY</span>AVANSHI</div>'
+    '<div class="sv-meta">'
+    '<span><b>Age</b> 15</span>'
+    '<span><b>Role</b> Opener</span>'
+    '<span><b>Bats</b> Left-hand</span>'
+    '<span><b>From</b> Bihar</span>'
+    '</div>'
+    '</div>',
+    unsafe_allow_html=True
+)
 
 # NEXT MATCH
 if next_match:
-    _, countdown_str = get_countdown(match_dt)
-    date_obj = datetime.strptime(next_match["date"], "%Y-%m-%d")
-    date_display = date_obj.strftime("%A, %b %d")
-    time_display = next_match["time"] + " IST"
-
-    is_live = match_dt <= datetime.now(IST) <= match_dt + timedelta(hours=4)
-
-    countdown_html = ""
-    if is_live:
-        countdown_html = '<div class="live-badge">● Live Now</div>'
-    else:
-        countdown_html = f"""
-        <div class="countdown-block">
-            <div class="countdown-label">Match starts in</div>
-            <div class="countdown-value" id="countdown">{countdown_str}</div>
-        </div>
-        """
-
-    st.markdown(f"""
-    <div class="next-match-card">
-        <div class="section-label">Next Match</div>
-        <div class="vs-block">
-            <div class="team-pill">RR</div>
-            <div class="vs-text">vs</div>
-            <div class="team-pill">{next_match['short']}</div>
-        </div>
-        <div class="match-meta">
-            <div class="meta-item">
-                <div class="meta-label">Opponent</div>
-                <div class="meta-value">{next_match['opponent']}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">Date</div>
-                <div class="meta-value">{date_display}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">Time (IST)</div>
-                <div class="meta-value">{time_display}</div>
-            </div>
-            <div class="meta-item">
-                <div class="meta-label">Venue</div>
-                <div class="meta-value" style="font-size:13px">{next_match['venue']}</div>
-            </div>
-        </div>
-        {countdown_html}
-    </div>
-    """, unsafe_allow_html=True)
+    _, cd_str = get_countdown(match_dt)
+    date_display = match_dt.strftime("%A, %d %B %Y")
+    is_live = match_dt <= now_ist <= match_dt + timedelta(hours=4)
+    cd_html = '<div class="sv-live">Live now</div>' if is_live else (
+        '<div class="sv-cd"><div class="sv-cd-val">' + cd_str + '</div>'
+        '<div class="sv-cd-lbl">Until match starts</div></div>'
+    )
+    st.markdown(
+        '<div class="sv-sec">'
+        '<div class="sv-sec-label">Next Match</div>'
+        '<div class="sv-vs">RR &nbsp;vs&nbsp; ' + next_match['opponent'] + '</div>'
+        '<div class="sv-detail"><b>' + date_display + '</b></div>'
+        '<div class="sv-detail">' + next_match['time'] + ' IST &nbsp;&middot;&nbsp; ' + next_match['venue'] + '</div>'
+        + cd_html + '</div>',
+        unsafe_allow_html=True
+    )
 else:
-    st.markdown("""
-    <div class="next-match-card">
-        <div class="section-label">Season Status</div>
-        <div style="font-size: 20px; font-weight: 600; color: #0d2247;">IPL 2026 league stage complete</div>
-        <div style="color: #64748b; margin-top: 8px; font-size: 14px;">Watch out for playoffs announcement.</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sv-sec"><div class="sv-sec-label">Season</div>'
+        '<div class="sv-vs">League stage complete.</div>'
+        '<div class="sv-detail">Watch for playoff fixtures.</div></div>',
+        unsafe_allow_html=True
+    )
 
-# STATS 2026
-st.markdown(f"""
-<div class="stats-card">
-    <div class="section-label">IPL 2026 Stats</div>
-    <div style="font-size: 11px; color: #94a3b8; font-family: 'DM Mono', monospace; margin-bottom: 4px;">
-        {stats['last_updated']}
-    </div>
-    <div class="stats-grid">
-        <div class="stat-box highlight">
-            <div class="stat-number">{stats['runs']}</div>
-            <div class="stat-name">Runs</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-number">{stats['matches']}</div>
-            <div class="stat-name">Matches</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-number">{stats['highest']}</div>
-            <div class="stat-name">Best</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-number">{stats['strike_rate']}</div>
-            <div class="stat-name">Strike Rate</div>
-        </div>
-        <div class="stat-box highlight">
-            <div class="stat-number">{stats['sixes']}</div>
-            <div class="stat-name">Sixes</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-number">{stats['fours']}</div>
-            <div class="stat-name">Fours</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-number">{stats['average']}</div>
-            <div class="stat-name">Average</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-number">{stats['fifties']}</div>
-            <div class="stat-name">Fifties</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-number">{stats['hundreds']}</div>
-            <div class="stat-name">Hundreds</div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+# SEASON STATS
+st.markdown('<div class="sv-sec"><div class="sv-sec-label">IPL 2026 &nbsp;&middot;&nbsp; Season Stats</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="sv-grid">'
+    '<div class="sv-cell hi"><div class="sv-num">' + str(stats['runs']) + '</div><div class="sv-lbl">Runs</div></div>'
+    '<div class="sv-cell"><div class="sv-num">' + str(stats['matches']) + '</div><div class="sv-lbl">Matches</div></div>'
+    '<div class="sv-cell"><div class="sv-num">' + str(stats['highest']) + '</div><div class="sv-lbl">Best Score</div></div>'
+    '<div class="sv-cell"><div class="sv-num">' + str(stats['strike_rate']) + '</div><div class="sv-lbl">Strike Rate</div></div>'
+    '<div class="sv-cell hi"><div class="sv-num">' + str(stats['sixes']) + '</div><div class="sv-lbl">Sixes</div></div>'
+    '<div class="sv-cell"><div class="sv-num">' + str(stats['fours']) + '</div><div class="sv-lbl">Fours</div></div>'
+    '<div class="sv-cell"><div class="sv-num">' + str(stats['average']) + '</div><div class="sv-lbl">Average</div></div>'
+    '<div class="sv-cell"><div class="sv-num">' + str(stats['fifties']) + '</div><div class="sv-lbl">Fifties</div></div>'
+    '<div class="sv-cell"><div class="sv-num">' + str(stats['hundreds']) + '</div><div class="sv-lbl">Hundreds</div></div>'
+    '</div>',
+    unsafe_allow_html=True
+)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # INNINGS LOG
-completed_innings = [i for i in stats['innings'] if i['balls'] > 0]
-if completed_innings:
-    rows_html = ""
-    for inn in completed_innings:
-        rows_html += f"""
-        <div class="log-row">
-            <div class="log-match">{inn['match']}</div>
-            <div class="log-runs">{inn['runs']}</div>
-            <div class="log-balls">({inn['balls']} b)</div>
-            <div class="log-tag">4s: {inn['fours']}</div>
-            <div class="log-tag six">6s: {inn['sixes']}</div>
-        </div>
-        """
-
-    st.markdown(f"""
-    <div class="log-card">
-        <div class="section-label">Innings Log — IPL 2026</div>
-        {rows_html}
-    </div>
-    """, unsafe_allow_html=True)
+completed = [i for i in stats['innings'] if i['balls'] > 0]
+if completed:
+    st.markdown('<div class="sv-sec"><div class="sv-sec-label">Innings Log</div>', unsafe_allow_html=True)
+    for inn in completed:
+        sr = round((inn['runs'] / inn['balls']) * 100, 1)
+        st.markdown(
+            '<div class="sv-irow">'
+            '<div class="sv-im">' + inn['match'].replace('vs ', '') + '</div>'
+            '<div class="sv-ir">' + str(inn['runs']) + '</div>'
+            '<div class="sv-ib">' + str(inn['balls']) + ' balls<br><span style="color:#1e1e1e">SR ' + str(sr) + '</span></div>'
+            '<div class="sv-it">4s &nbsp;' + str(inn['fours']) + '</div>'
+            '<div class="sv-it">6s &nbsp;' + str(inn['sixes']) + '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # RECORDS
-st.markdown("""
-<div class="records-card">
-    <div class="section-label" style="color: #60a5fa;">Records He Holds</div>
-    <div class="record-item">
-        <div class="record-dot"></div>
-        <div class="record-text"><strong>Youngest centurion in men's T20 cricket</strong> — 101 off 38 balls vs GT, IPL 2025 (age 14)</div>
-    </div>
-    <div class="record-item">
-        <div class="record-dot"></div>
-        <div class="record-text"><strong>2nd fastest century in IPL history</strong> — off just 35 deliveries</div>
-    </div>
-    <div class="record-item">
-        <div class="record-dot"></div>
-        <div class="record-text"><strong>Youngest IPL debutant ever</strong> — at 14 years and 23 days</div>
-    </div>
-    <div class="record-item">
-        <div class="record-dot"></div>
-        <div class="record-text"><strong>U19 World Cup 2026 Player of the Tournament</strong> — 175 off 80 balls in the final vs England U19</div>
-    </div>
-    <div class="record-item">
-        <div class="record-dot"></div>
-        <div class="record-text"><strong>Orange Cap holder, IPL 2026</strong> — 267+ strike rate across the first four matches</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+records = [
+    ("Youngest centurion in men's T20 cricket", "101 off 38 balls vs GT, IPL 2025. He was 14."),
+    ("2nd fastest century in IPL history", "Off 35 deliveries. Only Chris Gayle has done it faster."),
+    ("Youngest IPL debutant ever", "14 years and 23 days when he walked out for RR in 2025."),
+    ("U19 World Cup 2026 Player of the Tournament", "175 off 80 balls in the final against England U19."),
+    ("Orange Cap holder, IPL 2026", "267+ strike rate through the first four matches of the season."),
+]
+st.markdown('<div class="sv-sec"><div class="sv-sec-label">Records</div>', unsafe_allow_html=True)
+for i, (title, detail) in enumerate(records):
+    st.markdown(
+        '<div class="sv-rec">'
+        '<div class="sv-rn">' + str(i+1).zfill(2) + '</div>'
+        '<div class="sv-rt"><strong>' + title + '</strong>' + detail + '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+st.markdown('</div>', unsafe_allow_html=True)
 
-# UPCOMING SCHEDULE
-now_ist = datetime.now(IST)
-upcoming = []
-for m in RR_SCHEDULE:
+# ALL MATCHES SLIDER
+st.markdown('<div class="sv-sec"><div class="sv-sec-label">All Matches &mdash; Slide to Browse</div>', unsafe_allow_html=True)
+
+match_labels = []
+for idx, m in enumerate(RR_SCHEDULE):
     mdt = datetime.strptime(f"{m['date']} {m['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=IST)
-    if mdt > now_ist + timedelta(hours=4):
-        upcoming.append((m, mdt))
+    is_past = mdt < now_ist - timedelta(hours=4)
+    is_today = mdt.date() == now_ist.date()
+    prefix = "✓" if is_past else ("●" if is_today else "○")
+    match_labels.append(prefix + " M" + str(idx+1) + " · " + m['short'] + " (" + m['date'][5:] + ")")
 
-if upcoming[:4]:
-    rows = ""
-    for m, mdt in upcoming[:4]:
-        dstr = mdt.strftime("%b %d")
-        rows += f"""
-        <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px;">
-            <div style="font-family: 'DM Mono', monospace; font-size: 11px; color: #94a3b8; width: 60px;">{dstr}</div>
-            <div style="flex: 1; font-weight: 600; color: #0d2247;">RR vs {m['short']}</div>
-            <div style="font-size: 12px; color: #64748b;">{m['time']} IST</div>
-        </div>
-        """
-    st.markdown(f"""
-    <div class="stats-card">
-        <div class="section-label">Coming Up</div>
-        {rows}
-    </div>
-    """, unsafe_allow_html=True)
+selected_label = st.select_slider("match", options=match_labels, label_visibility="collapsed")
+selected_idx = match_labels.index(selected_label)
+sel = RR_SCHEDULE[selected_idx]
+sel_dt = datetime.strptime(f"{sel['date']} {sel['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=IST)
+sel_is_past = sel_dt < now_ist - timedelta(hours=4)
+sel_is_today = sel_dt.date() == now_ist.date()
+sel_date = sel_dt.strftime("%d %B %Y")
+inn_data = innings_by_match.get(sel['short'], None)
 
-# FOOTER
-st.markdown("""
-<div class="footer">
-    Built for fans who discovered cricket through a 15-year-old.<br>
-    Stats refresh every 5 minutes · IPL 2026 · Rajasthan Royals
-</div>
-""", unsafe_allow_html=True)
+if sel_is_today:
+    pill = '<span class="sv-pill live">Live Today</span>'
+elif sel_is_past:
+    pill = '<span class="sv-pill won">' + (sel.get('result') or 'Played') + '</span>'
+else:
+    pill = '<span class="sv-pill up">Upcoming</span>'
+
+st.markdown(
+    '<div style="padding-top:8px;">'
+    '<div style="font-family:Oswald,sans-serif;font-size:30px;font-weight:500;color:#fff;letter-spacing:-0.5px;">RR vs ' + sel['opponent'] + '</div>'
+    '<div style="font-size:12px;color:#333;letter-spacing:1px;margin-top:6px;">' + sel_date + ' &nbsp;&middot;&nbsp; ' + sel['time'] + ' IST</div>'
+    '<div style="font-size:12px;color:#222;letter-spacing:0.5px;margin-top:3px;">' + sel['venue'] + '</div>'
+    + pill,
+    unsafe_allow_html=True
+)
+
+if inn_data:
+    sr = round((inn_data['runs'] / inn_data['balls']) * 100, 1)
+    st.markdown(
+        '<div class="sv-sgrid">'
+        '<div class="sv-sc"><div class="sv-sn">' + str(inn_data['runs']) + '</div><div class="sv-sl">Runs</div></div>'
+        '<div class="sv-sc"><div class="sv-sn">' + str(inn_data['balls']) + '</div><div class="sv-sl">Balls</div></div>'
+        '<div class="sv-sc"><div class="sv-sn">' + str(sr) + '</div><div class="sv-sl">SR</div></div>'
+        '<div class="sv-sc"><div class="sv-sn">' + str(inn_data['sixes']) + '</div><div class="sv-sl">Sixes</div></div>'
+        '<div class="sv-sc"><div class="sv-sn">' + str(inn_data['fours']) + '</div><div class="sv-sl">Fours</div></div>'
+        '</div></div>',
+        unsafe_allow_html=True
+    )
+elif sel_is_today:
+    st.markdown('<div class="sv-nodata">Match in progress</div></div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div class="sv-nodata">Stats available after the match</div></div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Auto-refresh every 60s if match is today
+# FOOTER
+st.markdown(
+    '<div class="sv-footer">IPL 2026 &nbsp;&middot;&nbsp; Rajasthan Royals &nbsp;&middot;&nbsp; Updated ' + stats['last_updated'] + '</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
 if next_match:
     match_date = datetime.strptime(next_match["date"], "%Y-%m-%d").date()
     if match_date == datetime.now(IST).date():
