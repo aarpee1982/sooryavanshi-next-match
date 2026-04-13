@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
 import time
 
@@ -48,18 +47,6 @@ FALLBACK_STATS = {
     "last_updated": "Apr 13, 2026"
 }
 
-@st.cache_data(ttl=300)
-def fetch_live_stats():
-    try:
-        url = "https://www.iplt20.com/players/vaibhav-sooryavanshi/22203"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        r = requests.get(url, headers=headers, timeout=8)
-        if r.status_code == 200:
-            return None
-    except Exception:
-        return None
-    return None
-
 def get_next_match():
     now_ist = datetime.now(IST)
     for match in RR_SCHEDULE:
@@ -72,22 +59,25 @@ def get_countdown(match_dt):
     now_ist = datetime.now(IST)
     delta = match_dt - now_ist
     if delta.total_seconds() <= 0:
-        return None, "LIVE"
+        return "LIVE NOW!"
     days = delta.days
     hours, rem = divmod(delta.seconds, 3600)
     minutes, _ = divmod(rem, 60)
     if days > 0:
-        return delta.total_seconds(), str(days) + "D " + str(hours).zfill(2) + "H " + str(minutes).zfill(2) + "M"
-    return delta.total_seconds(), str(hours).zfill(2) + "H " + str(minutes).zfill(2) + "M"
+        return str(days) + "d " + str(hours).zfill(2) + "h " + str(minutes).zfill(2) + "m"
+    return str(hours).zfill(2) + "h " + str(minutes).zfill(2) + "m"
 
-stats = fetch_live_stats() or FALLBACK_STATS
+stats = FALLBACK_STATS
 next_match, match_dt = get_next_match()
 now_ist = datetime.now(IST)
 innings_by_match = {i['match'].replace('vs ', ''): i for i in stats['innings'] if i['balls'] > 0}
 
+# Tetris block colors per stat
+BLOCK_COLORS = ["#FF3B3B", "#FF9500", "#FFDD00", "#34C759", "#007AFF", "#AF52DE", "#FF2D55", "#5AC8FA", "#FF6B6B"]
+
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Oswald:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;700;800;900&display=swap');
 
 * { box-sizing: border-box; }
 
@@ -98,173 +88,462 @@ footer, #MainMenu { display: none !important; }
 
 [data-testid="stAppViewContainer"],
 [data-testid="stMain"],
-section.main { background: #080808 !important; }
+section.main {
+    background: #FFFBF0 !important;
+}
 
 .block-container {
     padding: 0 !important;
-    max-width: 720px !important;
+    max-width: 740px !important;
     margin: 0 auto !important;
 }
 
-.sv { padding: 0 28px 80px; font-family: 'Inter', sans-serif; color: #fff; background: #080808; }
+/* ── WRAPPER ── */
+.tx {
+    padding: 0 20px 80px;
+    font-family: 'Nunito', sans-serif;
+    background: #FFFBF0;
+}
 
-.sv-hero { padding: 72px 0 56px; border-bottom: 1px solid #161616; }
-.sv-tag { font-size: 10px; font-weight: 500; letter-spacing: 4px; text-transform: uppercase; color: #3a3a3a; margin-bottom: 20px; }
-.sv-name { font-family: 'Oswald', sans-serif; font-size: clamp(58px, 13vw, 92px); font-weight: 700; line-height: 0.9; color: #fff; letter-spacing: -1px; margin-bottom: 22px; }
-.sv-name span { color: #222; }
-.sv-meta { font-size: 12px; color: #333; letter-spacing: 1px; display: flex; gap: 20px; flex-wrap: wrap; }
-.sv-meta b { color: #666; font-weight: 500; }
+/* ── HERO ── */
+.tx-hero {
+    background: #FFDD00;
+    border: 4px solid #1a1a1a;
+    border-radius: 0px;
+    padding: 36px 32px 32px;
+    margin-bottom: 16px;
+    position: relative;
+    box-shadow: 6px 6px 0px #1a1a1a;
+}
+.tx-hero-eyebrow {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #1a1a1a;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+.tx-hero-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(18px, 4.5vw, 28px);
+    color: #1a1a1a;
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+.tx-hero-name span { color: #FF3B3B; }
+.tx-hero-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.tx-tag {
+    background: #1a1a1a;
+    color: #FFDD00;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 6px 10px;
+    border-radius: 0;
+    letter-spacing: 0.5px;
+}
+.tx-bat-emoji {
+    position: absolute;
+    top: 24px;
+    right: 28px;
+    font-size: 48px;
+    opacity: 0.25;
+}
 
-.sv-sec { padding: 48px 0; border-bottom: 1px solid #111; }
-.sv-sec-label { font-size: 10px; font-weight: 500; letter-spacing: 4px; text-transform: uppercase; color: #333; margin-bottom: 28px; }
+/* ── SECTION HEADER ── */
+.tx-sec-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #1a1a1a;
+    letter-spacing: 1px;
+    margin: 24px 0 12px;
+    padding: 10px 14px;
+    background: #1a1a1a;
+    color: #FFDD00;
+    display: inline-block;
+}
 
-.sv-vs { font-family: 'Oswald', sans-serif; font-size: clamp(28px, 7vw, 48px); font-weight: 600; color: #fff; line-height: 1; margin-bottom: 12px; letter-spacing: -0.5px; }
-.sv-detail { font-size: 13px; color: #444; letter-spacing: 0.5px; margin-bottom: 4px; }
-.sv-detail b { color: #777; font-weight: 400; }
+/* ── NEXT MATCH CARD ── */
+.tx-match-card {
+    background: #007AFF;
+    border: 4px solid #1a1a1a;
+    padding: 28px;
+    margin-bottom: 16px;
+    box-shadow: 6px 6px 0px #1a1a1a;
+    position: relative;
+}
+.tx-match-vs {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(13px, 3.5vw, 20px);
+    color: #ffffff;
+    line-height: 1.6;
+    margin-bottom: 14px;
+}
+.tx-match-meta {
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 4px;
+    font-weight: 700;
+}
+.tx-countdown {
+    margin-top: 20px;
+    background: #FFDD00;
+    border: 3px solid #1a1a1a;
+    padding: 14px 20px;
+    display: inline-block;
+}
+.tx-countdown-val {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(16px, 4vw, 24px);
+    color: #1a1a1a;
+    letter-spacing: 2px;
+}
+.tx-countdown-lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #1a1a1a;
+    margin-top: 6px;
+    opacity: 0.6;
+}
+.tx-live-badge {
+    display: inline-block;
+    margin-top: 20px;
+    background: #FF3B3B;
+    border: 3px solid #1a1a1a;
+    padding: 10px 18px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #ffffff;
+    letter-spacing: 1px;
+    animation: flash 0.8s step-end infinite;
+}
+@keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-.sv-cd { margin-top: 32px; }
-.sv-cd-val { font-family: 'Oswald', sans-serif; font-size: clamp(38px, 9vw, 60px); font-weight: 300; color: #fff; letter-spacing: 4px; line-height: 1; margin-bottom: 8px; }
-.sv-cd-lbl { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #333; }
-.sv-live { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #ef4444; font-weight: 500; margin-top: 32px; }
-.sv-live::before { content: ''; width: 7px; height: 7px; background: #ef4444; border-radius: 50%; animation: blink 1.2s ease-in-out infinite; display: inline-block; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+/* ── STATS TETRIS GRID ── */
+.tx-tetris-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.tx-block {
+    border: 4px solid #1a1a1a;
+    padding: 20px 16px;
+    box-shadow: 5px 5px 0px #1a1a1a;
+    text-align: center;
+    position: relative;
+}
+.tx-block-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(22px, 5vw, 32px);
+    color: #1a1a1a;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+.tx-block-lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #1a1a1a;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+}
 
-.sv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #161616; border: 1px solid #161616; }
-.sv-cell { background: #080808; padding: 30px 22px; }
-.sv-cell.hi { background: #0c0c0c; }
-.sv-num { font-family: 'Oswald', sans-serif; font-size: 42px; font-weight: 400; color: #fff; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; }
-.sv-lbl { font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: #2a2a2a; font-weight: 500; }
+/* ── INNINGS LOG ── */
+.tx-innings-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.tx-innings-row {
+    border: 4px solid #1a1a1a;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: 56px 1fr auto auto auto;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 4px 4px 0px #1a1a1a;
+}
+.tx-inn-match {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #1a1a1a;
+    opacity: 0.6;
+}
+.tx-inn-runs {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(18px, 4vw, 26px);
+    color: #1a1a1a;
+    line-height: 1;
+}
+.tx-inn-balls {
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
+    color: #555;
+    font-weight: 700;
+}
+.tx-inn-chip {
+    background: #1a1a1a;
+    color: #FFDD00;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 5px 8px;
+}
 
-.sv-irow { display: grid; grid-template-columns: 52px 1fr 90px 56px 56px; align-items: center; padding: 18px 0; border-bottom: 1px solid #0f0f0f; gap: 8px; }
-.sv-irow:last-child { border-bottom: none; }
-.sv-im { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #2a2a2a; font-weight: 500; }
-.sv-ir { font-family: 'Oswald', sans-serif; font-size: 34px; font-weight: 400; color: #fff; line-height: 1; }
-.sv-ib { font-size: 12px; color: #2a2a2a; line-height: 1.6; }
-.sv-it { font-size: 11px; color: #333; letter-spacing: 1px; text-align: right; }
+/* ── RECORDS ── */
+.tx-records-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.tx-record-card {
+    border: 4px solid #1a1a1a;
+    padding: 18px 20px;
+    box-shadow: 4px 4px 0px #1a1a1a;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+.tx-record-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #fff;
+    background: #1a1a1a;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.tx-record-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #1a1a1a;
+    line-height: 1.8;
+    margin-bottom: 6px;
+}
+.tx-record-detail {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    color: #555;
+    font-weight: 700;
+    line-height: 1.5;
+}
 
-.sv-rec { display: grid; grid-template-columns: 20px 1fr; gap: 16px; padding: 22px 0; border-bottom: 1px solid #0f0f0f; align-items: start; }
-.sv-rec:last-child { border-bottom: none; }
-.sv-rn { font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 300; color: #222; padding-top: 3px; letter-spacing: 1px; }
-.sv-rt { font-size: 14px; color: #444; line-height: 1.6; font-weight: 300; }
-.sv-rt strong { color: #bbb; font-weight: 500; display: block; margin-bottom: 3px; font-size: 15px; }
+/* ── MATCH SLIDER SECTION ── */
+.tx-slider-card {
+    border: 4px solid #1a1a1a;
+    padding: 24px 22px;
+    box-shadow: 6px 6px 0px #1a1a1a;
+    margin-top: 12px;
+    margin-bottom: 16px;
+}
+.tx-slider-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(11px, 3vw, 16px);
+    color: #1a1a1a;
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+.tx-slider-meta {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    color: #777;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.tx-status-won  { display:inline-block; background:#34C759; border:3px solid #1a1a1a; color:#fff; font-family:'Press Start 2P',monospace; font-size:7px; padding:6px 12px; margin-top:12px; }
+.tx-status-live { display:inline-block; background:#FF3B3B; border:3px solid #1a1a1a; color:#fff; font-family:'Press Start 2P',monospace; font-size:7px; padding:6px 12px; margin-top:12px; }
+.tx-status-up   { display:inline-block; background:#8E8E93; border:3px solid #1a1a1a; color:#fff; font-family:'Press Start 2P',monospace; font-size:7px; padding:6px 12px; margin-top:12px; }
 
-.sv-pill { display: inline-block; margin-top: 14px; padding: 4px 14px; border-radius: 2px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; }
-.sv-pill.won { background: #0a1a0a; color: #4ade80; border: 1px solid #152815; }
-.sv-pill.live { background: #1a0a0a; color: #ef4444; border: 1px solid #2a1010; }
-.sv-pill.up { background: #111; color: #444; border: 1px solid #1c1c1c; }
+.tx-score-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 18px;
+}
+.tx-score-cell {
+    border: 3px solid #1a1a1a;
+    padding: 14px 8px;
+    text-align: center;
+}
+.tx-score-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 3vw, 20px);
+    color: #1a1a1a;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+.tx-score-lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    color: #888;
+}
+.tx-nodata {
+    margin-top: 16px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #aaa;
+    letter-spacing: 1px;
+}
 
-.sv-sgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: #161616; border: 1px solid #161616; margin-top: 22px; }
-.sv-sc { background: #0c0c0c; padding: 18px 10px; text-align: center; }
-.sv-sn { font-family: 'Oswald', sans-serif; font-size: 26px; font-weight: 400; color: #fff; line-height: 1; margin-bottom: 6px; }
-.sv-sl { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #252525; font-weight: 500; }
-.sv-nodata { margin-top: 22px; padding: 18px 0; font-size: 11px; color: #222; letter-spacing: 2px; text-transform: uppercase; }
+/* ── FOOTER ── */
+.tx-footer {
+    margin-top: 32px;
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #aaa;
+    letter-spacing: 1px;
+    line-height: 2;
+}
 
-.sv-footer { padding: 40px 0 20px; font-size: 10px; color: #1c1c1c; letter-spacing: 2px; text-transform: uppercase; border-top: 1px solid #0f0f0f; margin-top: 0; text-align: center; }
-
-div[data-testid="stSlider"] { padding: 8px 0 4px; }
+/* Slider overrides */
+[data-testid="stSlider"] { padding: 8px 0 4px !important; }
+div[data-baseweb="slider"] > div:first-child {
+    background: #1a1a1a !important;
+    height: 6px !important;
+}
+div[data-baseweb="slider"] > div > div[role="slider"] {
+    background: #FF3B3B !important;
+    border: 3px solid #1a1a1a !important;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 0 !important;
+}
+.stSlider p { color: #888 !important; font-family: 'Press Start 2P', monospace !important; font-size: 7px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="sv">', unsafe_allow_html=True)
+st.markdown('<div class="tx">', unsafe_allow_html=True)
 
-# HERO
+# ── HERO ──────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<div class="sv-hero">'
-    '<div class="sv-tag">Rajasthan Royals &nbsp;&middot;&nbsp; IPL 2026</div>'
-    '<div class="sv-name">VAIBHAV<br><span>SOORY</span>AVANSHI</div>'
-    '<div class="sv-meta">'
-    '<span><b>Age</b> 15</span>'
-    '<span><b>Role</b> Opener</span>'
-    '<span><b>Bats</b> Left-hand</span>'
-    '<span><b>From</b> Bihar</span>'
+    '<div class="tx-hero">'
+    '<div class="tx-bat-emoji">🏏</div>'
+    '<div class="tx-hero-eyebrow">RAJASTHAN ROYALS · IPL 2026</div>'
+    '<div class="tx-hero-name">VAIBHAV<br><span>SOORY</span>AVANSHI</div>'
+    '<div class="tx-hero-tags">'
+    '<span class="tx-tag">AGE 15</span>'
+    '<span class="tx-tag">OPENER</span>'
+    '<span class="tx-tag">LEFT-HAND</span>'
+    '<span class="tx-tag">BIHAR</span>'
     '</div>'
     '</div>',
     unsafe_allow_html=True
 )
 
-# NEXT MATCH
+# ── NEXT MATCH ────────────────────────────────────────────────────────────────
+st.markdown('<div class="tx-sec-title">▶ NEXT MATCH</div>', unsafe_allow_html=True)
+
 if next_match:
-    _, cd_str = get_countdown(match_dt)
-    date_display = match_dt.strftime("%A, %d %B %Y")
+    cd_str = get_countdown(match_dt)
+    date_display = match_dt.strftime("%a, %d %b %Y")
     is_live = match_dt <= now_ist <= match_dt + timedelta(hours=4)
-    cd_html = '<div class="sv-live">Live now</div>' if is_live else (
-        '<div class="sv-cd"><div class="sv-cd-val">' + cd_str + '</div>'
-        '<div class="sv-cd-lbl">Until match starts</div></div>'
-    )
+
+    if is_live:
+        cd_html = '<div class="tx-live-badge">● LIVE NOW!</div>'
+    else:
+        cd_html = (
+            '<div class="tx-countdown">'
+            '<div class="tx-countdown-val">' + cd_str + '</div>'
+            '<div class="tx-countdown-lbl">UNTIL MATCH STARTS</div>'
+            '</div>'
+        )
+
     st.markdown(
-        '<div class="sv-sec">'
-        '<div class="sv-sec-label">Next Match</div>'
-        '<div class="sv-vs">RR &nbsp;vs&nbsp; ' + next_match['opponent'] + '</div>'
-        '<div class="sv-detail"><b>' + date_display + '</b></div>'
-        '<div class="sv-detail">' + next_match['time'] + ' IST &nbsp;&middot;&nbsp; ' + next_match['venue'] + '</div>'
+        '<div class="tx-match-card">'
+        '<div class="tx-match-vs">RR vs<br>' + next_match['opponent'].upper() + '</div>'
+        '<div class="tx-match-meta">📅 ' + date_display + ' · ' + next_match['time'] + ' IST</div>'
+        '<div class="tx-match-meta">📍 ' + next_match['venue'] + '</div>'
         + cd_html + '</div>',
         unsafe_allow_html=True
     )
-else:
-    st.markdown(
-        '<div class="sv-sec"><div class="sv-sec-label">Season</div>'
-        '<div class="sv-vs">League stage complete.</div>'
-        '<div class="sv-detail">Watch for playoff fixtures.</div></div>',
-        unsafe_allow_html=True
+
+# ── SEASON STATS ──────────────────────────────────────────────────────────────
+st.markdown('<div class="tx-sec-title">▶ IPL 2026 STATS</div>', unsafe_allow_html=True)
+
+stat_data = [
+    (stats['runs'], "RUNS"),
+    (stats['matches'], "MATCHES"),
+    (stats['highest'], "BEST"),
+    (stats['strike_rate'], "STRIKE RATE"),
+    (stats['sixes'], "SIXES 💥"),
+    (stats['fours'], "FOURS"),
+    (stats['average'], "AVERAGE"),
+    (stats['fifties'], "FIFTIES"),
+    (stats['hundreds'], "100s"),
+]
+
+colors = ["#FFDD00","#FF9500","#FF3B3B","#34C759","#007AFF","#AF52DE","#FF2D55","#5AC8FA","#FF6B6B"]
+
+grid_html = '<div class="tx-tetris-grid">'
+for i, (val, lbl) in enumerate(stat_data):
+    bg = colors[i % len(colors)]
+    grid_html += (
+        '<div class="tx-block" style="background:' + bg + ';">'
+        '<div class="tx-block-num">' + str(val) + '</div>'
+        '<div class="tx-block-lbl">' + lbl + '</div>'
+        '</div>'
     )
+grid_html += '</div>'
+st.markdown(grid_html, unsafe_allow_html=True)
 
-# SEASON STATS
-st.markdown('<div class="sv-sec"><div class="sv-sec-label">IPL 2026 &nbsp;&middot;&nbsp; Season Stats</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="sv-grid">'
-    '<div class="sv-cell hi"><div class="sv-num">' + str(stats['runs']) + '</div><div class="sv-lbl">Runs</div></div>'
-    '<div class="sv-cell"><div class="sv-num">' + str(stats['matches']) + '</div><div class="sv-lbl">Matches</div></div>'
-    '<div class="sv-cell"><div class="sv-num">' + str(stats['highest']) + '</div><div class="sv-lbl">Best Score</div></div>'
-    '<div class="sv-cell"><div class="sv-num">' + str(stats['strike_rate']) + '</div><div class="sv-lbl">Strike Rate</div></div>'
-    '<div class="sv-cell hi"><div class="sv-num">' + str(stats['sixes']) + '</div><div class="sv-lbl">Sixes</div></div>'
-    '<div class="sv-cell"><div class="sv-num">' + str(stats['fours']) + '</div><div class="sv-lbl">Fours</div></div>'
-    '<div class="sv-cell"><div class="sv-num">' + str(stats['average']) + '</div><div class="sv-lbl">Average</div></div>'
-    '<div class="sv-cell"><div class="sv-num">' + str(stats['fifties']) + '</div><div class="sv-lbl">Fifties</div></div>'
-    '<div class="sv-cell"><div class="sv-num">' + str(stats['hundreds']) + '</div><div class="sv-lbl">Hundreds</div></div>'
-    '</div>',
-    unsafe_allow_html=True
-)
-st.markdown('</div>', unsafe_allow_html=True)
-
-# INNINGS LOG
+# ── INNINGS LOG ───────────────────────────────────────────────────────────────
 completed = [i for i in stats['innings'] if i['balls'] > 0]
 if completed:
-    st.markdown('<div class="sv-sec"><div class="sv-sec-label">Innings Log</div>', unsafe_allow_html=True)
-    for inn in completed:
+    st.markdown('<div class="tx-sec-title">▶ INNINGS LOG</div>', unsafe_allow_html=True)
+    inn_colors = ["#FFDD00","#FF9500","#34C759","#007AFF","#AF52DE"]
+    rows_html = '<div class="tx-innings-wrap">'
+    for idx, inn in enumerate(completed):
         sr = round((inn['runs'] / inn['balls']) * 100, 1)
-        st.markdown(
-            '<div class="sv-irow">'
-            '<div class="sv-im">' + inn['match'].replace('vs ', '') + '</div>'
-            '<div class="sv-ir">' + str(inn['runs']) + '</div>'
-            '<div class="sv-ib">' + str(inn['balls']) + ' balls<br><span style="color:#1e1e1e">SR ' + str(sr) + '</span></div>'
-            '<div class="sv-it">4s &nbsp;' + str(inn['fours']) + '</div>'
-            '<div class="sv-it">6s &nbsp;' + str(inn['sixes']) + '</div>'
-            '</div>',
-            unsafe_allow_html=True
+        bg = inn_colors[idx % len(inn_colors)]
+        rows_html += (
+            '<div class="tx-innings-row" style="background:' + bg + ';">'
+            '<div class="tx-inn-match">' + inn['match'].replace('vs ','') + '</div>'
+            '<div class="tx-inn-runs">' + str(inn['runs']) + '</div>'
+            '<div class="tx-inn-balls">' + str(inn['balls']) + 'b<br>SR ' + str(sr) + '</div>'
+            '<div class="tx-inn-chip">4s ' + str(inn['fours']) + '</div>'
+            '<div class="tx-inn-chip">6s ' + str(inn['sixes']) + '</div>'
+            '</div>'
         )
-    st.markdown('</div>', unsafe_allow_html=True)
+    rows_html += '</div>'
+    st.markdown(rows_html, unsafe_allow_html=True)
 
-# RECORDS
+# ── RECORDS ───────────────────────────────────────────────────────────────────
 records = [
-    ("Youngest centurion in men's T20 cricket", "101 off 38 balls vs GT, IPL 2025. He was 14."),
-    ("2nd fastest century in IPL history", "Off 35 deliveries. Only Chris Gayle has done it faster."),
-    ("Youngest IPL debutant ever", "14 years and 23 days when he walked out for RR in 2025."),
-    ("U19 World Cup 2026 Player of the Tournament", "175 off 80 balls in the final against England U19."),
-    ("Orange Cap holder, IPL 2026", "267+ strike rate through the first four matches of the season."),
+    ("YOUNGEST T20 CENTURION", "101 off 38 balls vs GT, IPL 2025. He was 14."),
+    ("2ND FASTEST IPL CENTURY", "Off 35 deliveries. Only Chris Gayle is faster."),
+    ("YOUNGEST IPL DEBUTANT", "14 years and 23 days when he walked out for RR."),
+    ("U19 WC PLAYER OF TOURNAMENT", "175 off 80 balls in the final vs England U19."),
+    ("ORANGE CAP HOLDER 2026", "267+ strike rate through the first four matches."),
 ]
-st.markdown('<div class="sv-sec"><div class="sv-sec-label">Records</div>', unsafe_allow_html=True)
-for i, (title, detail) in enumerate(records):
-    st.markdown(
-        '<div class="sv-rec">'
-        '<div class="sv-rn">' + str(i+1).zfill(2) + '</div>'
-        '<div class="sv-rt"><strong>' + title + '</strong>' + detail + '</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-st.markdown('</div>', unsafe_allow_html=True)
+rec_colors = ["#FF3B3B","#007AFF","#AF52DE","#34C759","#FF9500"]
 
-# ALL MATCHES SLIDER
-st.markdown('<div class="sv-sec"><div class="sv-sec-label">All Matches &mdash; Slide to Browse</div>', unsafe_allow_html=True)
+st.markdown('<div class="tx-sec-title">▶ RECORDS</div>', unsafe_allow_html=True)
+recs_html = '<div class="tx-records-wrap">'
+for i, (title, detail) in enumerate(records):
+    bg = rec_colors[i % len(rec_colors)]
+    recs_html += (
+        '<div class="tx-record-card" style="background:' + bg + '20; border-color:' + bg + ';">'
+        '<div class="tx-record-num" style="background:' + bg + ';">' + str(i+1) + '</div>'
+        '<div>'
+        '<div class="tx-record-title">' + title + '</div>'
+        '<div class="tx-record-detail">' + detail + '</div>'
+        '</div>'
+        '</div>'
+    )
+recs_html += '</div>'
+st.markdown(recs_html, unsafe_allow_html=True)
+
+# ── ALL MATCHES SLIDER ────────────────────────────────────────────────────────
+st.markdown('<div class="tx-sec-title">▶ ALL MATCHES</div>', unsafe_allow_html=True)
 
 match_labels = []
 for idx, m in enumerate(RR_SCHEDULE):
@@ -280,47 +559,59 @@ sel = RR_SCHEDULE[selected_idx]
 sel_dt = datetime.strptime(f"{sel['date']} {sel['time']}", "%Y-%m-%d %H:%M").replace(tzinfo=IST)
 sel_is_past = sel_dt < now_ist - timedelta(hours=4)
 sel_is_today = sel_dt.date() == now_ist.date()
-sel_date = sel_dt.strftime("%d %B %Y")
+sel_date = sel_dt.strftime("%a, %d %b %Y")
 inn_data = innings_by_match.get(sel['short'], None)
 
+slider_bg_colors = ["#FFDD00","#FF9500","#FF3B3B","#34C759","#007AFF","#AF52DE","#FF2D55","#5AC8FA","#FF6B6B","#FFDD00","#FF9500","#FF3B3B","#34C759"]
+card_bg = slider_bg_colors[selected_idx % len(slider_bg_colors)]
+
 if sel_is_today:
-    pill = '<span class="sv-pill live">Live Today</span>'
+    pill = '<div class="tx-status-live">● LIVE TODAY</div>'
 elif sel_is_past:
-    pill = '<span class="sv-pill won">' + (sel.get('result') or 'Played') + '</span>'
+    pill = '<div class="tx-status-won">✓ ' + (sel.get('result') or 'PLAYED') + '</div>'
 else:
-    pill = '<span class="sv-pill up">Upcoming</span>'
+    pill = '<div class="tx-status-up">UPCOMING</div>'
 
 st.markdown(
-    '<div style="padding-top:8px;">'
-    '<div style="font-family:Oswald,sans-serif;font-size:30px;font-weight:500;color:#fff;letter-spacing:-0.5px;">RR vs ' + sel['opponent'] + '</div>'
-    '<div style="font-size:12px;color:#333;letter-spacing:1px;margin-top:6px;">' + sel_date + ' &nbsp;&middot;&nbsp; ' + sel['time'] + ' IST</div>'
-    '<div style="font-size:12px;color:#222;letter-spacing:0.5px;margin-top:3px;">' + sel['venue'] + '</div>'
+    '<div class="tx-slider-card" style="background:' + card_bg + '30; border-color:' + card_bg + ';">'
+    '<div class="tx-slider-title">RR vs<br>' + sel['opponent'].upper() + '</div>'
+    '<div class="tx-slider-meta">📅 ' + sel_date + ' · ' + sel['time'] + ' IST</div>'
+    '<div class="tx-slider-meta">📍 ' + sel['venue'] + '</div>'
     + pill,
     unsafe_allow_html=True
 )
 
 if inn_data:
     sr = round((inn_data['runs'] / inn_data['balls']) * 100, 1)
-    st.markdown(
-        '<div class="sv-sgrid">'
-        '<div class="sv-sc"><div class="sv-sn">' + str(inn_data['runs']) + '</div><div class="sv-sl">Runs</div></div>'
-        '<div class="sv-sc"><div class="sv-sn">' + str(inn_data['balls']) + '</div><div class="sv-sl">Balls</div></div>'
-        '<div class="sv-sc"><div class="sv-sn">' + str(sr) + '</div><div class="sv-sl">SR</div></div>'
-        '<div class="sv-sc"><div class="sv-sn">' + str(inn_data['sixes']) + '</div><div class="sv-sl">Sixes</div></div>'
-        '<div class="sv-sc"><div class="sv-sn">' + str(inn_data['fours']) + '</div><div class="sv-sl">Fours</div></div>'
-        '</div></div>',
-        unsafe_allow_html=True
-    )
+    score_colors = ["#FF3B3B","#FF9500","#FFDD00","#34C759","#007AFF"]
+    sg = '<div class="tx-score-grid">'
+    for val, lbl, sc in [
+        (inn_data['runs'], "RUNS", score_colors[0]),
+        (inn_data['balls'], "BALLS", score_colors[1]),
+        (sr, "SR", score_colors[2]),
+        (inn_data['sixes'], "SIXES", score_colors[3]),
+        (inn_data['fours'], "FOURS", score_colors[4]),
+    ]:
+        sg += (
+            '<div class="tx-score-cell" style="background:' + sc + '; border-color:#1a1a1a;">'
+            '<div class="tx-score-num">' + str(val) + '</div>'
+            '<div class="tx-score-lbl">' + lbl + '</div>'
+            '</div>'
+        )
+    sg += '</div>'
+    st.markdown(sg + '</div>', unsafe_allow_html=True)
 elif sel_is_today:
-    st.markdown('<div class="sv-nodata">Match in progress</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="tx-nodata">MATCH IN PROGRESS...</div></div>', unsafe_allow_html=True)
 else:
-    st.markdown('<div class="sv-nodata">Stats available after the match</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="tx-nodata">STATS AFTER MATCH</div></div>', unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-# FOOTER
+# ── FOOTER ────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<div class="sv-footer">IPL 2026 &nbsp;&middot;&nbsp; Rajasthan Royals &nbsp;&middot;&nbsp; Updated ' + stats['last_updated'] + '</div>',
+    '<div class="tx-footer">'
+    'IPL 2026 · RAJASTHAN ROYALS<br>'
+    'UPDATED ' + stats['last_updated'] + '<br><br>'
+    '🏏 WATCHING EVERY MATCH HE PLAYS'
+    '</div>',
     unsafe_allow_html=True
 )
 
